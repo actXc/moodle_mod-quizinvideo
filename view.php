@@ -226,7 +226,7 @@ if (!$viewobj->quizinvideohasquestions) {
 $viewobj->showbacktocourse = ($viewobj->buttontext === '' &&
     course_get_format($course)->has_view_page());
 
-//echo $OUTPUT->header();
+echo $OUTPUT->header();
 
 if (isguestuser()) {
     // Guests can't do a quizinvideo, so offer them a choice of logging in or going back.
@@ -237,7 +237,23 @@ if (isguestuser()) {
     echo $output->view_page_notenrolled($course, $quizinvideo, $cm, $context, $viewobj->infomessages);
 } else {
 //    echo $output->view_page($course, $quizinvideo, $cm, $context, $viewobj);
-    redirect($CFG->wwwroot . '/mod/quizinvideo/startattempt.php?cmid=' . $id . '&sesskey=' . sesskey());
+    $accessmanager = $quizinvideoobj->get_access_manager($timenow);
+    $messages = $accessmanager->prevent_access();
+    if (!$quizinvideoobj->is_preview_user() && $messages) {
+        if ($lastattempt = end($viewobj->attemptobjs)) {
+            redirect($quizinvideoobj->review_url($lastattempt->get_attempt()->id, true));
+        } else {
+            echo $OUTPUT->header();
+            print_error('attempterror', 'quizinvideo', $quizinvideoobj->view_url(),
+                $output->access_messages($messages));
+        }
+    } else {
+        if ($lastattempt = end($viewobj->attemptobjs)) {
+            $lastattempt->set_state();
+        }
+        // redirect($quizinvideoobj->start_attempt_url());
+        echo $output->view_page($course, $quizinvideo, $cm, $context, $viewobj);
+    }
 }
 
 echo $OUTPUT->footer();
